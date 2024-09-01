@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 - 2023 Elytrium
+ * Copyright (C) 2021 - 2024 Elytrium
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -321,7 +321,14 @@ public class LimboAuth {
     this.nicknameValidationPattern = Pattern.compile(Settings.IMP.MAIN.ALLOWED_NICKNAME_REGEX);
 
     try {
-      TableUtils.createTableIfNotExists(this.connectionSource, RegisteredPlayer.class);
+      try {
+        TableUtils.createTableIfNotExists(this.connectionSource, RegisteredPlayer.class);
+      } catch (SQLException e) {
+        if (!e.getMessage().contains("CREATE INDEX")) {
+          throw e;
+        }
+      }
+
       this.playerDao = DaoManager.createDao(this.connectionSource, RegisteredPlayer.class);
       this.migrateDb(this.playerDao);
     } catch (SQLException e) {
@@ -510,8 +517,12 @@ public class LimboAuth {
   }
 
   public void removePlayerFromCache(String username) {
-    this.cachedAuthChecks.remove(username.toLowerCase(Locale.ROOT));
-    this.premiumCache.remove(username.toLowerCase(Locale.ROOT));
+    this.removePlayerFromCacheLowercased(username.toLowerCase(Locale.ROOT));
+  }
+
+  public void removePlayerFromCacheLowercased(String username) {
+    this.cachedAuthChecks.remove(username);
+    this.premiumCache.remove(username);
   }
 
   public boolean needAuth(Player player) {
